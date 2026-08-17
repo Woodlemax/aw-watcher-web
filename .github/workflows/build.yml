@@ -59,7 +59,7 @@ jobs:
         run: |
           xcrun safari-web-extension-converter ./build \
             --project-location . \
-            --bundle-identifier net.activitywatch.activitywatchwebwatcher \
+            --bundle-identifier net.activitywatch.ActivityWatch-Web-Watcher \
             --macos-only \
             --force
 

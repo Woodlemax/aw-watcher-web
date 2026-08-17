@@ -1,11 +1,12 @@
 import browser from 'webextension-polyfill'
+import config from './config'
 
-// Send a message to the background every 20 seconds to keep the Service Worker alive
+// Periodically message the background to keep the Service Worker alive.
 function keepAlive() {
   browser.runtime.sendMessage({ type: 'KEEP_ALIVE' }).catch(() => {
     // Expected during reload
   })
 }
 
-setInterval(keepAlive, 20 * 1000)
+setInterval(keepAlive, config.focusGuard.intervalInSeconds * 1000)
 keepAlive()

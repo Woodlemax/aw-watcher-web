@@ -93,6 +93,31 @@ This will create zip files in the `artifacts` directory:
 - `artifacts/firefox.zip` for Firefox
 - `artifacts/chrome.zip` for Chrome
 
+### Local Focus Guard bridge (Chrome)
+
+The Chrome build also classifies the currently active tab against a small local
+work allowlist. The defaults are `*.yadro.com` and `*.github.com`; edit
+`focusGuard.allowedUrlPatterns` in `src/config.ts` to change them.
+
+When the active tab or window changes, and every five seconds while the
+extension background is active, the extension sends a `POST` request to:
+
+```text
+http://127.0.0.1:8765/
+```
+
+The body is exactly one boolean field:
+
+```json
+{ "allowed": true }
+```
+
+A local Windows Focus Guard can listen on that loopback endpoint and retain the
+latest value. This bridge does not include the URL, title, domain, timestamp, or
+browsing history in the request, and it does not store the matched URL. Missing,
+invalid, browser-internal, and non-HTTP(S) URLs fail closed as `allowed: false`.
+If the local listener is not running, normal ActivityWatch behavior continues.
+
 ## if you want to build safari version
 
 1. First follow the steps above to build the extension:

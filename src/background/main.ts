@@ -15,6 +15,7 @@ import {
   setHostname,
   waitForEnabled,
 } from '../storage'
+import { publishFocusGuardStatus } from './focus-guard'
 
 async function getIsConsentRequired() {
   if (!config.requireConsent) return false
@@ -75,6 +76,32 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
   return tabActivatedListener(client)(activeInfo)
 })
 
+function refreshFocusGuardStatus() {
+  void publishFocusGuardStatus().catch(() => {
+    console.debug('Unable to determine Focus Guard status')
+  })
+}
+
+if (config.focusGuard.enabled) {
+  browser.tabs.onActivated.addListener(refreshFocusGuardStatus)
+  browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+    if (tab.active && (changeInfo.url || changeInfo.status === 'complete')) {
+      refreshFocusGuardStatus()
+    }
+  })
+  browser.windows.onFocusChanged.addListener((windowId) => {
+    if (windowId !== browser.windows.WINDOW_ID_NONE) {
+      refreshFocusGuardStatus()
+    }
+  })
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === config.heartbeat.alarmName) {
+      refreshFocusGuardStatus()
+    }
+  })
+  refreshFocusGuardStatus()
+}
+
 console.debug('Setting base url')
 clientReady
   .then(() => setBaseUrl(client.baseURL))
@@ -108,6 +135,7 @@ async function setupOffscreen() {
 
 browser.runtime.onMessage.addListener((message: any) => {
   if (message.type === 'KEEP_ALIVE') {
+    refreshFocusGuardStatus()
     return Promise.resolve({ status: 'ok' })
   }
   return undefined

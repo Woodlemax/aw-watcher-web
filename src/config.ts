@@ -4,6 +4,12 @@ const config = {
   heartbeat: {
     alarmName: 'heartbeat',
     intervalInSeconds: 60,
+    activityChangeDebounceMilliseconds: 250,
+  },
+  pomodoro: {
+    alarmName: 'pomodoro-notifications',
+    apiBaseUrl: 'http://127.0.0.1:5667/pomodoro',
+    pollIntervalMilliseconds: 1000,
   },
 }
 

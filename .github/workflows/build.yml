@@ -97,3 +97,6 @@ jobs:
 
       - name: Typecheck TypeScript
         run: make compile
+
+      - name: Unit tests
+        run: make test

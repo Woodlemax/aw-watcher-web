@@ -1,11 +1,12 @@
 import browser from 'webextension-polyfill'
 import config from '../config'
 import {
+  createActivityChangeListeners,
   heartbeatAlarmListener,
   sendInitialHeartbeat,
-  tabActivatedListener,
 } from './heartbeat'
 import { getClient, detectHostname, loadApiKey } from './client'
+import { createPomodoroNotificationController } from './pomodoro'
 import {
   getConsentStatus,
   getHostname,
@@ -40,6 +41,7 @@ console.info('Starting...')
 console.debug('Creating client')
 const client = getClient()
 const clientReady = loadApiKey(client)
+const pomodoroNotifications = createPomodoroNotificationController()
 
 browser.runtime.onInstalled.addListener(async () => {
   const { consent } = await getConsentStatus()
@@ -66,14 +68,36 @@ console.debug('Creating alarms and tab listeners')
 browser.alarms.create(config.heartbeat.alarmName, {
   periodInMinutes: Math.floor(config.heartbeat.intervalInSeconds / 60),
 })
+browser.alarms.create(config.pomodoro.alarmName, {
+  periodInMinutes: 0.5,
+})
 browser.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === config.pomodoro.alarmName) {
+    return pomodoroNotifications.poll()
+  }
   await clientReady
   return heartbeatAlarmListener(client)(alarm)
 })
+const activityChangeListeners = createActivityChangeListeners(client)
 browser.tabs.onActivated.addListener(async (activeInfo) => {
   await clientReady
-  return tabActivatedListener(client)(activeInfo)
+  activityChangeListeners.tabActivated(activeInfo)
 })
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  await clientReady
+  activityChangeListeners.tabUpdated(tabId, changeInfo, tab)
+})
+browser.windows.onFocusChanged.addListener(async (windowId) => {
+  await clientReady
+  activityChangeListeners.windowFocusChanged(windowId)
+})
+browser.notifications.onClicked.addListener((notificationId) =>
+  pomodoroNotifications.act(notificationId),
+)
+browser.notifications.onButtonClicked.addListener(
+  (notificationId, buttonIndex) =>
+    pomodoroNotifications.act(notificationId, buttonIndex),
+)
 
 console.debug('Setting base url')
 clientReady
@@ -110,6 +134,9 @@ browser.runtime.onMessage.addListener((message: any) => {
   if (message.type === 'KEEP_ALIVE') {
     return Promise.resolve({ status: 'ok' })
   }
+  if (message.type === 'POMODORO_POLL') {
+    return pomodoroNotifications.poll().then(() => ({ status: 'ok' }))
+  }
   return undefined
 })
 
@@ -118,3 +145,4 @@ browser.runtime.onStartup.addListener(setupOffscreen)
 browser.runtime.onInstalled.addListener(setupOffscreen)
 
 setupOffscreen()
+void pomodoroNotifications.poll()

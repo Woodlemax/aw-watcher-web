@@ -1,11 +1,12 @@
 import browser from 'webextension-polyfill'
-import { getActiveWindowTab, getTab, getTabs } from './helpers'
+import { getActiveWindowTab, getTabs } from './helpers'
 import config from '../config'
 import { AWClient, IEvent } from 'aw-client'
 import { getBucketId, sendHeartbeat } from './client'
 import { getEnabled, getHeartbeatData, setHeartbeatData } from '../storage'
 import deepEqual from 'deep-equal'
 import * as punycode from 'punycode.js'
+import { createDebouncedAsyncTask } from './async-debounce'
 
 function decodeURL(url: string): string {
   try {
@@ -121,11 +122,32 @@ export const heartbeatAlarmListener =
     await heartbeat(client, activeWindowTab, tabs.length)
   }
 
-export const tabActivatedListener =
-  (client: AWClient) =>
-  async (activeInfo: browser.Tabs.OnActivatedActiveInfoType) => {
-    const tab = await getTab(activeInfo.tabId)
+export function createActivityChangeListeners(client: AWClient) {
+  const activeHeartbeat = createDebouncedAsyncTask(async () => {
+    const activeWindowTab = await getActiveWindowTab()
     const tabs = await getTabs()
-    console.debug('Sending heartbeat for tab activation', tab.url)
-    await heartbeat(client, tab, tabs.length)
+    console.debug(
+      'Sending heartbeat after browser activity change',
+      activeWindowTab?.url,
+    )
+    await heartbeat(client, activeWindowTab, tabs.length)
+  }, config.heartbeat.activityChangeDebounceMilliseconds)
+
+  return {
+    tabActivated: (_activeInfo: browser.Tabs.OnActivatedActiveInfoType) => {
+      activeHeartbeat.schedule()
+    },
+    tabUpdated: (
+      _tabId: number,
+      changeInfo: browser.Tabs.OnUpdatedChangeInfoType,
+      tab: browser.Tabs.Tab,
+    ) => {
+      if (!tab.active || (!changeInfo.url && !changeInfo.title)) return
+      activeHeartbeat.schedule()
+    },
+    windowFocusChanged: (windowId: number) => {
+      if (windowId === browser.windows.WINDOW_ID_NONE) return
+      activeHeartbeat.schedule()
+    },
   }
+}

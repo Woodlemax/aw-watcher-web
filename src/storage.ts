@@ -109,3 +109,33 @@ export const getApiKey = (): Promise<ApiKey | undefined> =>
     .then((data: StorageData) => data.apiKey as string | undefined)
 export const setApiKey = (apiKey: ApiKey) =>
   browser.storage.local.set({ apiKey })
+
+export interface PomodoroNotificationCursor {
+  instanceId: string
+  lastId: number
+}
+
+export const getPomodoroNotificationCursor = async (): Promise<
+  PomodoroNotificationCursor | undefined
+> => {
+  const value = await browser.storage.local
+    .get('pomodoroNotificationCursor')
+    .then((data: StorageData) => data.pomodoroNotificationCursor as unknown)
+  if (typeof value !== 'object' || value === null) return undefined
+  const cursor = value as Record<string, unknown>
+  if (
+    typeof cursor.instanceId !== 'string' ||
+    !Number.isSafeInteger(cursor.lastId) ||
+    Number(cursor.lastId) < 0
+  ) {
+    return undefined
+  }
+  return {
+    instanceId: cursor.instanceId,
+    lastId: Number(cursor.lastId),
+  }
+}
+
+export const setPomodoroNotificationCursor = (
+  cursor: PomodoroNotificationCursor,
+) => browser.storage.local.set({ pomodoroNotificationCursor: cursor })

@@ -2,9 +2,9 @@ name: Build
 
 on:
   push:
-    branches: [master]
+    branches: ['*']
   pull_request:
-    branches: [master]
+    branches: ['*']
 
 jobs:
   build:
@@ -59,7 +59,7 @@ jobs:
         run: |
           xcrun safari-web-extension-converter ./build \
             --project-location . \
-            --bundle-identifier net.activitywatch.activitywatchwebwatcher \
+            --bundle-identifier net.activitywatch.ActivityWatch-Web-Watcher \
             --macos-only \
             --force
 
@@ -97,3 +97,6 @@ jobs:
 
       - name: Typecheck TypeScript
         run: make compile
+
+      - name: Unit tests
+        run: make test

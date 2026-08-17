@@ -93,6 +93,9 @@ This will create zip files in the `artifacts` directory:
 - `artifacts/firefox.zip` for Firefox
 - `artifacts/chrome.zip` for Chrome
 
+The development branch also documents its ActivityWatch Pomodoro heartbeat and
+Chrome notification behavior in [docs/pomodoro-chrome.md](docs/pomodoro-chrome.md).
+
 ## if you want to build safari version
 
 1. First follow the steps above to build the extension:
